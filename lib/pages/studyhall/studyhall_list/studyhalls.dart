@@ -7,6 +7,7 @@ import 'package:find_my_cube/scoped_models/main.dart';
 
 class StudyHallsPage extends StatefulWidget {
   final MainModel model;
+
   StudyHallsPage(this.model);
 
   State<StatefulWidget> createState() {
@@ -14,23 +15,23 @@ class StudyHallsPage extends StatefulWidget {
   }
 }
 
-class _StudyHallsPageState extends State<StudyHallsPage>{
-
+class _StudyHallsPageState extends State<StudyHallsPage> {
   @override
   void initState() {
     widget.model.fetchStudyHalls();
     super.initState();
   }
 
-  Widget _buildStudyHallList(){
-    return ScopedModelDescendant(builder: (BuildContext context, Widget child, MainModel model){
+  Widget _buildStudyHallList() {
+    return ScopedModelDescendant(
+        builder: (BuildContext context, Widget child, MainModel model) {
       Widget content = Center(child: Text('No Study Halls Found !!'));
-      if(model.displayedStudyHalls.length > 0 && !model.isLoading){
+      if (model.displayedStudyHalls.length > 0 && !model.isLoading) {
         content = StudyHalls();
-      }else if(model.isLoading){
-        content = Center(child:CircularProgressIndicator());
+      } else if (model.isLoading) {
+        content = Center(child: CircularProgressIndicator());
       }
-      return content;
+      return RefreshIndicator(onRefresh: model.fetchStudyHalls, child: content);
     });
   }
 
@@ -41,14 +42,18 @@ class _StudyHallsPageState extends State<StudyHallsPage>{
         appBar: AppBar(
           title: Text('Study Halls'),
           actions: <Widget>[
-            ScopedModelDescendant<MainModel>(builder: (BuildContext context, Widget child, MainModel model){
-              return IconButton(
-                icon: Icon(model.displayFavoritesOnly? Icons.favorite: Icons.favorite_border),
-                onPressed: (){
-                  model.toggleDisplayMode();
-                },
-              );
-            },)
+            ScopedModelDescendant<MainModel>(
+              builder: (BuildContext context, Widget child, MainModel model) {
+                return IconButton(
+                  icon: Icon(model.displayFavoritesOnly
+                      ? Icons.favorite
+                      : Icons.favorite_border),
+                  onPressed: () {
+                    model.toggleDisplayMode();
+                  },
+                );
+              },
+            )
           ],
         ),
         body: _buildStudyHallList());
