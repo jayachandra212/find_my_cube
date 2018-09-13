@@ -104,14 +104,23 @@ class StudyHallsModel extends CommonModel {
   }
 
   void deleteStudyHall() {
+    _isLoading = true;
+    final deletedStudyHallId = selectedStudyHall.id;
     _studyHalls.removeAt(selectedStudyHallIndex);
+    _selStudyHallIndex = null;
     notifyListeners();
+    http.delete('https://fmc-experiment.firebaseio.com/studyHalls/${deletedStudyHallId}.json')
+        .then((http.Response response){
+      _isLoading = false;
+      notifyListeners();
+    });
+
   }
 
-  void fetchStudyHalls() {
+  Future<Null> fetchStudyHalls() {
     _isLoading = true;
     notifyListeners();
-    http
+    return http
         .get('https://fmc-experiment.firebaseio.com/studyHalls.json')
         .then((http.Response response) {
       final List<StudyHall> fetchedStudyHallsList = [];
