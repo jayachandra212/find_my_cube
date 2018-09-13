@@ -30,7 +30,11 @@ class _MyAppState extends State<MyApp> {
         theme: ThemeData(
             brightness: Brightness.light,
             primarySwatch: Colors.lightBlue,
-            accentColor: Colors.greenAccent),
+            accentColor: Colors.greenAccent,
+            primaryTextTheme: Theme
+                .of(context)
+                .primaryTextTheme
+                .apply(bodyColor: Colors.white)),
         debugShowCheckedModeBanner: false,
         home: SplashScreen(),
         routes: {

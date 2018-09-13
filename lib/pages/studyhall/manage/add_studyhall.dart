@@ -4,6 +4,7 @@ import 'package:scoped_model/scoped_model.dart';
 import 'package:find_my_cube/models/studyhall.dart';
 import 'package:find_my_cube/scoped_models/main.dart';
 import 'package:find_my_cube/utils/fmc_navigator.dart';
+import 'package:find_my_cube/components/studyhall_widgets/SaveButton.dart';
 
 class AddStudyHallPage extends StatefulWidget {
   @override
@@ -24,67 +25,65 @@ class _AddStudyHallPageState extends State<AddStudyHallPage> {
 
   Widget _buildNameTextField(StudyHall studyHall) {
     return TextFormField(
-          decoration: InputDecoration(labelText: 'StudyHall Name'),
-          initialValue: studyHall == null ? '' : studyHall.name.toString(),
-          validator: (String value) {
-            if (value.isEmpty || value.length < 5) {
-              return 'Name is required and should be 5+ charecter long';
-            }
-          },
-          onSaved: (String value) {
-            _formData['name'] = value;
-          },
-        );
+      decoration: InputDecoration(labelText: 'StudyHall Name'),
+      initialValue: studyHall == null ? '' : studyHall.name.toString(),
+      validator: (String value) {
+        if (value.isEmpty || value.length < 5) {
+          return 'Name is required and should be 5+ charecter long';
+        }
+      },
+      onSaved: (String value) {
+        _formData['name'] = value;
+      },
+    );
   }
 
   Widget _buildLocationTextField(StudyHall studyHall) {
     return TextFormField(
-          decoration: InputDecoration(labelText: 'Location of Study Hall'),
-          initialValue: studyHall == null ? '' : studyHall.location.toString(),
-          validator: (String value) {
-            if (value.isEmpty || value.length < 5) {
-              return 'Location is required and should be 5+ charecter long';
-            }
-          },
-          onSaved: (String value) {
-            _formData['location'] = value;
-          },
-        );
+      decoration: InputDecoration(labelText: 'Location of Study Hall'),
+      initialValue: studyHall == null ? '' : studyHall.location.toString(),
+      validator: (String value) {
+        if (value.isEmpty || value.length < 5) {
+          return 'Location is required and should be 5+ charecter long';
+        }
+      },
+      onSaved: (String value) {
+        _formData['location'] = value;
+      },
+    );
   }
 
   Widget _buildPriceTextField(StudyHall studyHall) {
     return TextFormField(
-          decoration: InputDecoration(labelText: 'Price'),
-          initialValue: studyHall == null ? '' : studyHall.price.toString(),
-          validator: (String value) {
-            if (value.isEmpty) {
-              return 'Price Information is required';
-            }
-          },
-          onSaved: (String value) {
-            _formData['price'] = double.parse(value);
-          },
-        );
+      decoration: InputDecoration(labelText: 'Price'),
+      initialValue: studyHall == null ? '' : studyHall.price.toString(),
+      validator: (String value) {
+        if (value.isEmpty) {
+          return 'Price Information is required';
+        }
+      },
+      onSaved: (String value) {
+        _formData['price'] = double.parse(value);
+      },
+    );
   }
 
-  void _submitForm(
-      Function addStudyHall, Function updateStudyHall, Function setSelectedStudyHall,
+  void _submitForm(Function addStudyHall, Function updateStudyHall,
+      Function setSelectedStudyHall,
       [int selectedStudyHallIndex]) {
     if (!_formKey.currentState.validate()) {
       return;
     }
     _formKey.currentState.save();
     if (selectedStudyHallIndex == null) {
-      addStudyHall(_formData['name'], _formData['location'],
-          _formData['price'],_formData['image'])
-          .then((_) => Navigator
-              .pushReplacementNamed(context, '/studyHalls')
+      addStudyHall(_formData['name'], _formData['location'], _formData['price'],
+              _formData['image'])
+          .then((_) => Navigator.pushReplacementNamed(context, '/studyHalls')
               .then((_) => setSelectedStudyHall(null)));
     } else {
       updateStudyHall(_formData['name'], _formData['location'],
-              _formData['price'],_formData['image'])
-          .then((_) => Navigator
-              .pushReplacementNamed(context, '/studyHalls')
+              _formData['price'], _formData['image'])
+          .then((_) => Navigator.pushReplacementNamed(context, '/studyHalls')
               .then((_) => setSelectedStudyHall(null)));
     }
   }
@@ -94,15 +93,15 @@ class _AddStudyHallPageState extends State<AddStudyHallPage> {
       builder: (BuildContext context, Widget child, MainModel model) {
         return model.isLoading
             ? Center(child: CircularProgressIndicator())
-            : RaisedButton(
-                child: Text('Save'),
-                textColor: Colors.white,
-                onPressed: () => _submitForm(
-                    model.addStudyHall,
-                    model.updateStudyHall,
-                    model.selectStudyHall,
-                    model.selectedStudyHallIndex),
-              );
+            : new Padding(
+                padding: const EdgeInsets.only(bottom: 50.0),
+                child: new InkWell(
+                    child: new SaveButton(),
+                    onTap: () => _submitForm(
+                        model.addStudyHall,
+                        model.updateStudyHall,
+                        model.selectStudyHall,
+                        model.selectedStudyHallIndex)));
       },
     );
   }
@@ -124,13 +123,21 @@ class _AddStudyHallPageState extends State<AddStudyHallPage> {
                 child: ListView(
                   padding: EdgeInsets.symmetric(horizontal: targetPadding / 2),
                   children: <Widget>[
-                    _buildNameTextField(studyHall),
-                    _buildLocationTextField(studyHall),
-                    _buildPriceTextField(studyHall),
-                    SizedBox(
-                      height: 10.0,
-                    ),
-                    _buildSubmitButton()
+                    new Stack(
+                        alignment: AlignmentDirectional.bottomCenter,
+                        children: <Widget>[
+                          new Column(
+                            children: <Widget>[
+                              _buildNameTextField(studyHall),
+                              _buildLocationTextField(studyHall),
+                              _buildPriceTextField(studyHall),
+                              SizedBox(
+                                height: 20.0,
+                              ),
+                              _buildSubmitButton()
+                            ],
+                          ),
+                        ])
                   ],
                 ))));
   }
