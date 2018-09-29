@@ -3,7 +3,6 @@ import 'package:scoped_model/scoped_model.dart';
 
 import 'package:find_my_cube/models/studyhall.dart';
 import 'package:find_my_cube/scoped_models/main.dart';
-import 'package:find_my_cube/utils/fmc_navigator.dart';
 import 'package:find_my_cube/components/studyhall_widgets/SaveButton.dart';
 
 class AddStudyHallPage extends StatefulWidget {
@@ -75,16 +74,54 @@ class _AddStudyHallPageState extends State<AddStudyHallPage> {
       return;
     }
     _formKey.currentState.save();
-    if (selectedStudyHallIndex == null) {
+    if (selectedStudyHallIndex == -1) {
       addStudyHall(_formData['name'], _formData['location'], _formData['price'],
               _formData['image'])
-          .then((_) => Navigator.pushReplacementNamed(context, '/studyHalls')
-              .then((_) => setSelectedStudyHall(null)));
+          .then((bool result) {
+        if (result) {
+          Navigator.pushReplacementNamed(context, '/studyHalls')
+              .then((_) => setSelectedStudyHall(null));
+        } else {
+          showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: Text('Something went wrong !!'),
+                  content: Text('Please try again later'),
+                  actions: <Widget>[
+                    FlatButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text('Okay'),
+                    )
+                  ],
+                );
+              });
+        }
+      });
     } else {
       updateStudyHall(_formData['name'], _formData['location'],
               _formData['price'], _formData['image'])
-          .then((_) => Navigator.pushReplacementNamed(context, '/studyHalls')
-              .then((_) => setSelectedStudyHall(null)));
+          .then((bool result) {
+        if (result) {
+          Navigator.pushReplacementNamed(context, '/studyHalls')
+              .then((_) => setSelectedStudyHall(null));
+        } else {
+          showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: Text('Something went wrong !!'),
+                  content: Text('Please try again later'),
+                  actions: <Widget>[
+                    FlatButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text('Okay'),
+                    )
+                  ],
+                );
+              });
+        }
+      });
     }
   }
 
@@ -148,7 +185,7 @@ class _AddStudyHallPageState extends State<AddStudyHallPage> {
       builder: (BuildContext context, Widget child, MainModel model) {
         final Widget pageContent =
             _buildPageContent(context, model.selectedStudyHall);
-        return model.selectedStudyHallIndex == null
+        return model.selectedStudyHallIndex == -1
             ? pageContent
             : Scaffold(
                 appBar: AppBar(title: Text('Edit Study Hall Info')),

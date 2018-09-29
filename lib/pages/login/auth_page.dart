@@ -72,6 +72,39 @@ class LoginScreenState extends State<LoginScreen>
         false;
   }
 
+  void _submitForm(Function authenticate, String email, String password) async {
+    Map<String, dynamic> successInformation;
+    if (!_formKey.currentState.validate()) {
+      return;
+    }
+    _formKey.currentState.save();
+    successInformation = await authenticate(email,password);
+
+    if (successInformation['success']) {
+      setState(() {
+        animationStatus = 1;
+      });
+      //Navigator.pushReplacementNamed(context, '/');
+    } else {
+      showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('An Error Occured!'),
+              content: Text(successInformation['message']),
+              actions: <Widget>[
+                FlatButton(
+                  child: Text('Okay'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                )
+              ],
+            );
+          });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     timeDilation = 0.4;
@@ -120,10 +153,7 @@ class LoginScreenState extends State<LoginScreen>
                                       print(usernameController.text == 'admin' && passwordController.text == 'admin');
                                       if (_formKey.currentState.validate()) {
                                         _formKey.currentState.save();
-                                        model.login(usernameController.text, passwordController.text);
-                                        setState(() {
-                                          animationStatus = 1;
-                                        });
+                                        _submitForm(model.authenticate,usernameController.text, passwordController.text);
                                         _playAnimation();
                                       }
                                     },

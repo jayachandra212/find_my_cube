@@ -10,8 +10,11 @@ class FormContainer extends StatelessWidget {
   FormContainer({this.formKey,this.usernameController,this.passwordController});
 
   String _validateUsername(String value) {
-   if (value == null || value.isEmpty)
-      return 'Please enter a Username';
+    if (value.isEmpty ||
+        !RegExp(r"[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?")
+            .hasMatch(value)) {
+      return 'Please enter valid email address';
+    }
    return null;
   }
 
