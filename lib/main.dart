@@ -11,6 +11,7 @@ import 'package:find_my_cube/pages/studyhall/studyhall_list/studyhalls.dart';
 import 'package:find_my_cube/pages/studyhall/studyhall_list/studyhall_info.dart';
 import 'package:find_my_cube/pages/studyhall/manage/manage_studyhalls.dart';
 import 'package:find_my_cube/scoped_models/main.dart';
+import 'package:find_my_cube/models/studyhall.dart';
 
 class MyApp extends StatefulWidget {
   @override
@@ -21,36 +22,62 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  final MainModel _model = new MainModel();
+  bool _isAuthenticated = false;
+
+  @override
+  void initState() {
+    _model.autoAuthenticate();
+    _model.userSubject.listen((bool isAuthenticated){
+      setState(() {
+        _isAuthenticated = isAuthenticated;
+      });
+    });
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final MainModel model = new MainModel();
     return ScopedModel<MainModel>(
-      model: model,
+      model: _model,
       child: new MaterialApp(
         theme: ThemeData(
             brightness: Brightness.light,
             primarySwatch: Colors.lightBlue,
-            accentColor: Colors.greenAccent),
+            accentColor: Colors.greenAccent,
+            primaryTextTheme: Theme
+                .of(context)
+                .primaryTextTheme
+                .apply(bodyColor: Colors.white)),
         debugShowCheckedModeBanner: false,
         home: SplashScreen(),
         routes: {
-          "/search": (BuildContext context) => SearchScreen(),
-          "/authenticate": (BuildContext context) => LoginScreen(),
+          "/search": (BuildContext context) => !_isAuthenticated ? LoginScreen():SearchScreen(),
+          "/authenticate": (BuildContext context) => !_isAuthenticated ? LoginScreen():StudyHallsPage(_model),
           "/signUpOptions": (BuildContext context) => SignUpOptions(),
           "/signUpStudent": (BuildContext context) => SignUpStudent(),
           "/signUpManager": (BuildContext context) => SignUpManager(),
-          "/studyHalls": (BuildContext context) => StudyHallsPage(model),
-          "/manageStudyHalls": (BuildContext context) => ManageStudyHallsPage(model)
+          "/studyHalls": (BuildContext context) => !_isAuthenticated ? LoginScreen():StudyHallsPage(_model),
+          "/manageStudyHalls": (BuildContext context) => !_isAuthenticated ? LoginScreen():ManageStudyHallsPage(_model)
         },
         onGenerateRoute: (RouteSettings settings) {
+          if(!_isAuthenticated){
+            return MaterialPageRoute<bool>(
+                builder: (BuildContext context) =>
+                    LoginScreen());
+          }
           final List<String> pathElements = settings.name.split('/');
           if (pathElements[0] != '') {
             return null;
           }
           if (pathElements[1] == 'studyHall') {
-            final int index = int.parse(pathElements[2]);
+            final String studyHallId = pathElements[2];
+            final StudyHall studyHall = _model.allStudyHalls.firstWhere((StudyHall studyHall){
+              return studyHall.id == studyHallId;
+            });
+            _model.selectStudyHall(studyHallId);
             return MaterialPageRoute<bool>(
-                builder: (BuildContext context) => StudyHallInfoPage(index));
+                builder: (BuildContext context) => !_isAuthenticated ? LoginScreen():StudyHallInfoPage(studyHall));
           }
           return null;
         },

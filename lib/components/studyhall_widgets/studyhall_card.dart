@@ -29,29 +29,26 @@ class StudyHallCard extends StatelessWidget {
   }
 
   Widget _buildActionButtons(BuildContext context) {
-    return ButtonBar(
-      alignment: MainAxisAlignment.center,
-      children: <Widget>[
+    return ScopedModelDescendant<MainModel>(
+        builder: (BuildContext context, Widget child, MainModel model) {
+      return ButtonBar(alignment: MainAxisAlignment.center, children: <Widget>[
         IconButton(
           icon: Icon(Icons.info),
           color: Theme.of(context).accentColor,
           onPressed: () => Navigator.pushNamed<bool>(
-              context, '/studyHall/' + studyHallIndex.toString()),
+              context, '/studyHall/' + model.allStudyHalls[studyHallIndex].id),
         ),
-        ScopedModelDescendant<MainModel>(
-          builder: (BuildContext context, Widget child, MainModel model) {
-            return IconButton(
-              icon: Icon(model.allStudyHalls[studyHallIndex].isFavorite?Icons.favorite: Icons.favorite_border),
-              color: Colors.red,
-              onPressed: (){
-                model.selectStudyHall(studyHallIndex);
-                model.toggleStudyHallFavoriteStatus();
-              }
-            );
-          },
-        ),
-      ],
-    );
+        IconButton(
+            icon: Icon(model.allStudyHalls[studyHallIndex].isFavorite
+                ? Icons.favorite
+                : Icons.favorite_border),
+            color: Colors.red,
+            onPressed: () {
+              model.selectStudyHall(model.allStudyHalls[studyHallIndex].id);
+              model.toggleStudyHallFavoriteStatus();
+            })
+      ]);
+    });
   }
 
   @override
