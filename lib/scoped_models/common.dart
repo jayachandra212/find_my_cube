@@ -155,7 +155,7 @@ class StudyHallsModel extends CommonModel {
     });
   }
 
-  Future<dynamic> fetchStudyHalls() {
+  Future<dynamic> fetchStudyHalls({onlyUserSpecific = false}) {
     _isLoading = true;
     notifyListeners();
     return http
@@ -171,17 +171,24 @@ class StudyHallsModel extends CommonModel {
       }
       studyHallListData.forEach((String studyHallId, dynamic studyHallData) {
         final StudyHall studyHall = StudyHall(
-          id: studyHallId,
-          name: studyHallData['name'],
-          location: studyHallData['location'],
-          price: studyHallData['price'],
-          image: studyHallData['image'],
-          userEmail: studyHallData['userEmail'],
-          userId: studyHallData['userId'],
-        );
+            id: studyHallId,
+            name: studyHallData['name'],
+            location: studyHallData['location'],
+            price: studyHallData['price'],
+            image: studyHallData['image'],
+            userEmail: studyHallData['userEmail'],
+            userId: studyHallData['userId'],
+            isFavorite: studyHallData['usersWishList'] == null
+                ? false
+                : (studyHallData['usersWishList'] as Map<String, dynamic>)
+                    .containsKey(_authenticatedUser.id));
         fetchedStudyHallsList.add(studyHall);
       });
-      _studyHalls = fetchedStudyHallsList;
+      _studyHalls = onlyUserSpecific
+          ? fetchedStudyHallsList.where((StudyHall studyHall) {
+              return studyHall.userId == _authenticatedUser.id;
+            }).toList()
+          : fetchedStudyHallsList;
       _isLoading = false;
       notifyListeners();
       _selStudyHallId = null;
@@ -197,7 +204,7 @@ class StudyHallsModel extends CommonModel {
     notifyListeners();
   }
 
-  void toggleStudyHallFavoriteStatus() {
+  void toggleStudyHallFavoriteStatus() async {
     final bool isCurrentlyFavorite =
         _studyHalls[selectedStudyHallIndex].isFavorite;
     final bool newFavoriteStatus = !isCurrentlyFavorite;
@@ -212,6 +219,31 @@ class StudyHallsModel extends CommonModel {
         isFavorite: newFavoriteStatus);
     _studyHalls[selectedStudyHallIndex] = updateStudyHall;
     notifyListeners();
+
+    http.Response response;
+
+    if (newFavoriteStatus) {
+      response = await http.put(
+          'https://fmc-experiment.firebaseio.com/studyHalls/${selectedStudyHall.id}/usersWishList/${_authenticatedUser.id}.json?auth=${_authenticatedUser.token}',
+          body: json.encode(true));
+    } else {
+      response = await http.delete(
+          'https://fmc-experiment.firebaseio.com/studyHalls/${selectedStudyHall.id}/usersWishList/${_authenticatedUser.id}.json?auth=${_authenticatedUser.token}');
+    }
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      final StudyHall updateStudyHall = StudyHall(
+          id: selectedStudyHall.id,
+          name: selectedStudyHall.name,
+          location: selectedStudyHall.location,
+          price: selectedStudyHall.price,
+          image: selectedStudyHall.image,
+          userEmail: selectedStudyHall.userEmail,
+          userId: selectedStudyHall.userId,
+          isFavorite: !newFavoriteStatus);
+      _studyHalls[selectedStudyHallIndex] = updateStudyHall;
+      notifyListeners();
+    }
   }
 
   void toggleDisplayMode() {
@@ -260,7 +292,8 @@ class UserModel extends CommonModel {
       'returnSecureToken': true
     };
     http.Response response = await http.post(
-        'https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key='+FMCConstants.apikey,
+        'https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=' +
+            FMCConstants.apikey,
         body: json.encode(authData),
         headers: {'Content-Type': 'application/json'});
 
@@ -272,22 +305,30 @@ class UserModel extends CommonModel {
     String message = 'Something went wrong!!';
 
     if (responseData.containsKey('idToken')) {
-      hasError = false;
-      message = 'Authentication Succeeded';
-      _authenticatedUser = User(
-          id: responseData['localId'],
-          email: email,
-          token: responseData['idToken']);
-      setAuthTimeout(int.parse(responseData['expiresIn']));
-      _userSubject.add(true);
-      final DateTime now = DateTime.now();
-      final DateTime expiryTime =
-          now.add(Duration(seconds: int.parse(responseData['expiresIn'])));
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      prefs.setString("token", responseData['idToken']);
-      prefs.setString("userEmail", email);
-      prefs.setString("userId", responseData['localId']);
-      prefs.setString("expiryTime", expiryTime.toIso8601String());
+      bool emailVerified =
+          await isEmailVerified(responseData['idToken'], email);
+      print("Email-Verified");
+      print(emailVerified);
+      if (emailVerified) {
+        hasError = false;
+        message = 'Authentication Succeeded';
+        _authenticatedUser = User(
+            id: responseData['localId'],
+            email: email,
+            token: responseData['idToken']);
+        setAuthTimeout(int.parse(responseData['expiresIn']));
+        _userSubject.add(true);
+        final DateTime now = DateTime.now();
+        final DateTime expiryTime =
+            now.add(Duration(seconds: int.parse(responseData['expiresIn'])));
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.setString("token", responseData['idToken']);
+        prefs.setString("userEmail", email);
+        prefs.setString("userId", responseData['localId']);
+        prefs.setString("expiryTime", expiryTime.toIso8601String());
+      } else {
+        message = 'Please verify your email!!';
+      }
     } else if (responseData['error']['message'] == 'EMAIL_EXISTS') {
       message = 'Email already exists!!';
     } else if (responseData['error']['message'] == 'EMAIL_NOT_FOUND') {
@@ -298,6 +339,25 @@ class UserModel extends CommonModel {
     _isLoading = false;
     notifyListeners();
     return {'success': !hasError, 'message': message};
+  }
+
+  Future<bool> isEmailVerified(String idToken, String email) async {
+    final Map<String, dynamic> inputData = {'idToken': idToken};
+    bool result = false;
+    http.Response response = await http.post(
+        'https://www.googleapis.com/identitytoolkit/v3/relyingparty/getAccountInfo?key=' +
+            FMCConstants.apikey,
+        body: json.encode(inputData),
+        headers: {'Content-Type': 'application/json'});
+    final Map<String, dynamic> responseData = jsonDecode(response.body);
+    if (responseData.containsKey('users')) {
+      List<dynamic> usersData = responseData['users'];
+      Map<String, dynamic> emailData =
+          usersData.firstWhere((u) => u['email'] == email);
+      if (emailData.containsKey("emailVerified"))
+        result = emailData['emailVerified'];
+    }
+    return result;
   }
 
   void autoAuthenticate() async {
@@ -335,7 +395,8 @@ class UserModel extends CommonModel {
     print("SignUpInfo");
     print(authData);
     http.Response response = await http.post(
-        'https://www.googleapis.com/identitytoolkit/v3/relyingparty/signupNewUser?key='+FMCConstants.apikey,
+        'https://www.googleapis.com/identitytoolkit/v3/relyingparty/signupNewUser?key=' +
+            FMCConstants.apikey,
         body: json.encode(authData),
         headers: {'Content-Type': 'application/json'});
 
@@ -386,7 +447,8 @@ class UserModel extends CommonModel {
     print("SignUpInfo");
     print(authData);
     http.Response response = await http.post(
-        'https://www.googleapis.com/identitytoolkit/v3/relyingparty/signupNewUser?key='+FMCConstants.apikey,
+        'https://www.googleapis.com/identitytoolkit/v3/relyingparty/signupNewUser?key=' +
+            FMCConstants.apikey,
         body: json.encode(authData),
         headers: {'Content-Type': 'application/json'});
 
@@ -414,16 +476,14 @@ class UserModel extends CommonModel {
       prefs.setString("userEmail", managerSignUpInfo['email']);
       prefs.setString("userId", responseData['localId']);
       prefs.setString("expiryTime", expiryTime.toIso8601String());
-      bool result =  await addStudyHall(
+      bool result = await addStudyHall(
           managerSignUpInfo['studyHallName'],
           managerSignUpInfo['studyHallAddress'],
           double.parse(managerSignUpInfo['studyHallPrice']),
-          "https://dy98q4zwk7hnp.cloudfront.net/1970-Dodge-Charger-Muscle%20&%20Pony%20Cars--Car-100742588-9ae6c36edbcb264f0db07f565cc1ac76.jpg?w=1280&h=720&r=thumbnail&s=1")
-      ;
-      if(result){
+          "https://dy98q4zwk7hnp.cloudfront.net/1970-Dodge-Charger-Muscle%20&%20Pony%20Cars--Car-100742588-9ae6c36edbcb264f0db07f565cc1ac76.jpg?w=1280&h=720&r=thumbnail&s=1");
+      if (result) {
         message = 'SHAS';
-      }
-      else {
+      } else {
         message = 'SHAF';
       }
     } else if (responseData['error']['message'] == 'EMAIL_EXISTS') {
@@ -433,7 +493,7 @@ class UserModel extends CommonModel {
     }
     _isLoading = false;
     notifyListeners();
-    print("messgae"+message);
+    print("messgae" + message);
     return {'success': !hasError, 'message': message};
   }
 }
