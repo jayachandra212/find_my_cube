@@ -16,6 +16,12 @@ class EditStudyHallInfoPage extends StatefulWidget {
 
 class _EditStudyHallInfoPageState extends State<EditStudyHallInfoPage> {
 
+  @override
+  initState() {
+    widget.model.fetchStudyHalls(onlyUserSpecific : true);
+    super.initState();
+  }
+
   Widget _buildEditButton(BuildContext context, int index, MainModel model) {
     return IconButton(
         icon: Icon(Icons.edit),
@@ -35,11 +41,7 @@ class _EditStudyHallInfoPageState extends State<EditStudyHallInfoPage> {
 
   @override
   Widget build(BuildContext context) {
-    @override
-    initState() {
-      widget.model.fetchStudyHalls();
-      super.initState();
-    }
+
     // TODO: implement build
     return ScopedModelDescendant<MainModel>(
         builder: (BuildContext context, Widget child, MainModel model) {
